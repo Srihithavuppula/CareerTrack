@@ -14,7 +14,13 @@ const mockTestRoutes = require("./routes/mockTestRoutes");
 const app = express();
 
 // ── Core Middleware ──────────────────────────────────────────
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://careertrack-srihitha.vercel.app',
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 // ── MongoDB ──────────────────────────────────────────────────
