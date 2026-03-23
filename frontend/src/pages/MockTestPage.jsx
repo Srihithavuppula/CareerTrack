@@ -29,6 +29,11 @@ function MockTestPage() {
   // Track if the user has ever submitted a test (for showing the last result)
   const [lastResult, setLastResult] = useState(null);
 
+  // Exit modal for All Tests button when in test mode
+  const [showAllTestsExitConfirm, setShowAllTestsExitConfirm] = useState(false);
+  // When displaying the result after exit, allow showing the card
+  const [showResultAfterExit, setShowResultAfterExit] = useState(false);
+
   useEffect(() => {
     const fetchTest = async () => {
       try {
@@ -106,6 +111,7 @@ function MockTestPage() {
     setSubmitted(false);
     setResults(null);
     setShowReview(false);
+    setShowResultAfterExit(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -126,6 +132,68 @@ function MockTestPage() {
 
   const cancelExit = () => {
     setShowExitConfirm(false);
+  };
+
+  // New: Handler for "All Tests" button in header or result page
+  const handleAllTestsClick = () => {
+    // If user hasn't answered anything and hasn't submitted, just go
+    if (Object.keys(answers).length === 0 && !submitted) {
+      navigate('/mocktests');
+    } else if (!submitted) {
+      // Show exit modal - "Do you want to exit test?"
+      setShowAllTestsExitConfirm(true);
+    } else {
+      // Already submitted, just go
+      navigate('/mocktests');
+    }
+  };
+
+  // When user confirms exit on "All Tests" modal, show the result card instead of discarding
+  const confirmAllTestsExit = async () => {
+    setShowAllTestsExitConfirm(false);
+
+    // If already submitted, just show last result if it exists
+    if (submitted && results) {
+      setShowResultAfterExit(true);
+      return;
+    }
+
+    // Try to submit the current answers as a result for partial test if any answers exist
+    // Or show previous result if lastResult exists
+    if (Object.keys(answers).length === 0) {
+      // No answers, just show last result if any
+      setShowResultAfterExit(true);
+      return;
+    }
+    // If there are answers, attempt to submit those for review grading
+    try {
+      setSubmitting(true);
+      const payload = test.questions.map((q) => ({
+        questionId: q._id,
+        answer: answers[q._id] || '',
+      }));
+      const res = await API.post(`/mocktests/${testId}/submit`, {
+        answers: payload,
+      });
+      setResults(res.data);
+      setSubmitted(true);
+      setShowResultAfterExit(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // On error, fallback to show last result if any
+      setShowResultAfterExit(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const cancelAllTestsExit = () => {
+    setShowAllTestsExitConfirm(false);
+  };
+
+  // Back to dashboard handler
+  const handleBackToDashboard = () => {
+    navigate('/');
   };
 
   const answeredCount = Object.keys(answers).length;
@@ -154,15 +222,37 @@ function MockTestPage() {
           <button onClick={() => navigate('/mocktests')} className="btn-primary">
             Back to Tests
           </button>
+          <button
+            onClick={handleBackToDashboard}
+            className="btn-secondary ml-2"
+            style={{ marginTop: "12px" }}
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
   }
 
-  // Always show the previous result card if not yet attempted this session
-  if ((lastResult && !submitted && Object.keys(answers).length === 0) || (submitted && results)) {
-    // Use either results (from this attempt) or lastResult (from storage)
-    const usedResults = submitted && results ? results : lastResult;
+  // Always show the previous result card if not yet attempted this session,
+  // OR if result is forced after exit (showResultAfterExit)
+  if (
+    (lastResult && !submitted && Object.keys(answers).length === 0 && !showResultAfterExit) ||
+    (submitted && results) ||
+    showResultAfterExit
+  ) {
+    // Determine which result to use
+    let usedResults = null;
+    if (showResultAfterExit) {
+      usedResults = results || lastResult || null;
+    } else {
+      usedResults = submitted && results ? results : lastResult;
+    }
+    if (!usedResults) {
+      // If no result is available, show All Tests page
+      navigate('/mocktests');
+      return null;
+    }
     const { score, correctAnswers, totalQuestions: total, results: qResults } = usedResults;
     const grade =
       score >= 90 ? { label: 'Excellent', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' } :
@@ -232,7 +322,7 @@ function MockTestPage() {
                 }}
               />
             </div>
-            <div className="mt-6 flex gap-3 justify-center">
+            <div className="mt-6 flex gap-3 justify-center flex-wrap">
               <button onClick={handleRetake} className="btn-secondary">
                 <RotateCcw size={15} />
                 Retake Test
@@ -245,10 +335,16 @@ function MockTestPage() {
                 Review Answers
               </button>
               <button
-                onClick={() => navigate('/mocktests')}
+                onClick={handleAllTestsClick}
                 className="btn-secondary"
               >
                 All Tests
+              </button>
+              <button
+                onClick={handleBackToDashboard}
+                className="btn-secondary"
+              >
+                Back to Dashboard
               </button>
             </div>
           </div>
@@ -325,6 +421,34 @@ function MockTestPage() {
             </div>
           </div>
         )}
+
+        {/* All Tests Exit Modal Overlay (for after "All Tests" click): */}
+        {showAllTestsExitConfirm && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+            <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
+              <h2 className="text-lg font-bold mb-2">Do you want to exit test?</h2>
+              <p className="text-slate-600 mb-4">
+                If you exit now, your current answers will be submitted for result and you can view your score.
+              </p>
+              <div className="flex justify-center gap-4 mt-2">
+                <button
+                  onClick={confirmAllTestsExit}
+                  className="btn-primary"
+                  style={{ minWidth: 80 }}
+                >
+                  Yes, Exit & Show Result
+                </button>
+                <button
+                  onClick={cancelAllTestsExit}
+                  className="btn-secondary"
+                  style={{ minWidth: 80 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -365,10 +489,38 @@ function MockTestPage() {
         </div>
       )}
 
+      {/* All Tests Exit Modal for Header button */}
+      {showAllTestsExitConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
+            <h2 className="text-lg font-bold mb-2">Do you want to exit test?</h2>
+            <p className="text-slate-600 mb-4">
+              If you exit now, your current answers will be submitted for result and you can view your score.
+            </p>
+            <div className="flex justify-center gap-4 mt-2">
+              <button
+                onClick={confirmAllTestsExit}
+                className="btn-primary"
+                style={{ minWidth: 80 }}
+              >
+                Yes, Exit & Show Result
+              </button>
+              <button
+                onClick={cancelAllTestsExit}
+                className="btn-secondary"
+                style={{ minWidth: 80 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={handleExit}
+          onClick={handleAllTestsClick}
           className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition"
         >
           <ArrowLeft size={15} />
