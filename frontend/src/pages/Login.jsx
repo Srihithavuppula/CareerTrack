@@ -514,6 +514,8 @@ function Login() {
                   Track
                 </span>
               </span>
+              {/* quote/caption for mobile/RIGHT side logo */}
+              <p className="text-xs text-slate-400">Learn smarter. Build consistently.</p>
             </div>
           </div>
           <div className="mb-8">
