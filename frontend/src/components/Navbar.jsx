@@ -10,12 +10,11 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
-    const confirm = window.confirm("Are you sure you want to logout?");
-    if (confirm) {
-      logout();
-      navigate("/login");
-    }
+    logout();
+    navigate("/login");
   };
+  
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const isActive = (path) =>
     location.pathname === path ||
     (path === "/courses" && location.pathname === "/");
@@ -131,10 +130,45 @@ function Navbar() {
                 </div>
               </div>
 
-              <button onClick={handleLogout} className="btn-secondary">
-                <LogOut size={14} />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
+              <button onClick={() => setShowLogoutModal(true)} className="btn-secondary">
+  <LogOut size={14} />
+  <span className="hidden sm:inline">Logout</span>
+</button>
+
+{showLogoutModal && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center"
+    style={{ background: "rgba(15,23,42,0.5)", backdropFilter: "blur(6px)" }}
+  >
+    <div className="card mx-4 w-full max-w-sm p-8">
+      <div
+        className="flex h-12 w-12 items-center justify-center rounded-2xl mb-4"
+        style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
+      >
+        <LogOut size={20} className="text-red-600" />
+      </div>
+      <h2 className="text-xl font-bold text-slate-900 mb-2">Logout?</h2>
+      <p className="text-sm text-slate-500">
+        Are you sure you want to logout from CareerTrack?
+      </p>
+      <div className="mt-6 flex gap-3">
+        <button
+          onClick={() => setShowLogoutModal(false)}
+          className="btn-secondary flex-1"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleLogout}
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition"
+          style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}
+        >
+          Yes, Logout
+        </button>
+      </div>
+    </div>
+  </div>
+)}
             </>
           )}
 
