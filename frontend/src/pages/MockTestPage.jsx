@@ -23,6 +23,12 @@ function MockTestPage() {
   const [results, setResults] = useState(null);
   const [showReview, setShowReview] = useState(false);
 
+  // Track if the exit modal is open
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Track if the user has ever submitted a test (for showing the last result)
+  const [lastResult, setLastResult] = useState(null);
+
   useEffect(() => {
     const fetchTest = async () => {
       try {
@@ -37,6 +43,27 @@ function MockTestPage() {
     };
     fetchTest();
   }, [testId]);
+
+  // Attempt to fetch last attempted result from localStorage
+  useEffect(() => {
+    const storedResult = localStorage.getItem(`mocktest_result_${testId}`);
+    if (storedResult) {
+      try {
+        setLastResult(JSON.parse(storedResult));
+      } catch {}
+    }
+  }, [testId]);
+
+  // Store current result in localStorage whenever it changes and submitted is true
+  useEffect(() => {
+    if (submitted && results) {
+      localStorage.setItem(
+        `mocktest_result_${testId}`,
+        JSON.stringify(results)
+      );
+      setLastResult(results);
+    }
+  }, [submitted, results, testId]);
 
   const handleAnswer = (questionId, answer) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
@@ -82,6 +109,25 @@ function MockTestPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleExit = () => {
+    // If user hasn't answered any question, just navigate quietly
+    if (Object.keys(answers).length === 0 && !submitted) {
+      navigate('/mocktests');
+    } else {
+      setShowExitConfirm(true);
+    }
+  };
+
+  const confirmExit = () => {
+    // Don't save anything, just go back to tests
+    setShowExitConfirm(false);
+    navigate('/mocktests');
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
   const answeredCount = Object.keys(answers).length;
   const totalQuestions = test?.questions?.length || 0;
   const progressPct = totalQuestions > 0
@@ -113,9 +159,11 @@ function MockTestPage() {
     );
   }
 
-  // ── Results Page ─────────────────────────────────────
-  if (submitted && results) {
-    const { score, correctAnswers, totalQuestions: total, results: qResults } = results;
+  // Always show the previous result card if not yet attempted this session
+  if ((lastResult && !submitted && Object.keys(answers).length === 0) || (submitted && results)) {
+    // Use either results (from this attempt) or lastResult (from storage)
+    const usedResults = submitted && results ? results : lastResult;
+    const { score, correctAnswers, totalQuestions: total, results: qResults } = usedResults;
     const grade =
       score >= 90 ? { label: 'Excellent', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' } :
       score >= 75 ? { label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' } :
@@ -124,7 +172,6 @@ function MockTestPage() {
 
     return (
       <div className="space-y-6 py-6">
-
         {/* Score Card */}
         <div className="card overflow-hidden">
           <div
@@ -141,7 +188,7 @@ function MockTestPage() {
 
             <p className="section-label mb-2">Test Completed</p>
             <h1 className="text-4xl font-bold text-slate-900">{score}%</h1>
-            <p className="mt-1 text-slate-500">{results.courseTitle}</p>
+            <p className="mt-1 text-slate-500">{usedResults.courseTitle}</p>
 
             <div
               className="inline-flex items-center gap-2 mt-3 rounded-full px-4 py-1.5 text-sm font-semibold"
@@ -185,7 +232,6 @@ function MockTestPage() {
                 }}
               />
             </div>
-
             <div className="mt-6 flex gap-3 justify-center">
               <button onClick={handleRetake} className="btn-secondary">
                 <RotateCcw size={15} />
@@ -209,7 +255,7 @@ function MockTestPage() {
         </div>
 
         {/* Review Section */}
-        {showReview && (
+        {showReview && qResults && (
           <div className="card p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-6">
               Answer Review
@@ -245,7 +291,6 @@ function MockTestPage() {
                       <p className="font-semibold text-slate-900 mb-3">
                         {q.question}
                       </p>
-
                       <div className="space-y-1.5 text-sm">
                         <div className="flex items-center gap-2">
                           <span className="text-slate-500 w-28 shrink-0">Your answer:</span>
@@ -292,10 +337,38 @@ function MockTestPage() {
   return (
     <div className="space-y-6 py-6">
 
+      {/* Exit Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
+            <h2 className="text-lg font-bold mb-2">Want to exit the test?</h2>
+            <p className="text-slate-600 mb-4">
+              If you exit, your answers will not be saved and you will lose your progress for this attempt.
+            </p>
+            <div className="flex justify-center gap-4 mt-2">
+              <button
+                onClick={confirmExit}
+                className="btn-primary"
+                style={{ minWidth: 80 }}
+              >
+                Yes, Exit
+              </button>
+              <button
+                onClick={cancelExit}
+                className="btn-secondary"
+                style={{ minWidth: 80 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate('/mocktests')}
+          onClick={handleExit}
           className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition"
         >
           <ArrowLeft size={15} />
