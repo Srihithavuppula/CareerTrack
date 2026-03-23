@@ -10,10 +10,12 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
-    logout();
-    navigate("/login");
+    const confirm = window.confirm("Are you sure you want to logout?");
+    if (confirm) {
+      logout();
+      navigate("/login");
+    }
   };
-
   const isActive = (path) =>
     location.pathname === path ||
     (path === "/courses" && location.pathname === "/");
