@@ -19,6 +19,27 @@ function Navbar() {
     location.pathname === path ||
     (path === "/courses" && location.pathname === "/");
 
+  // Prepare mobile nav items to avoid duplicates, and include Admin for admin role
+  const getMobileNavItems = () => {
+    const items = [
+      { to: "/courses", label: "Courses" }
+    ];
+    if (isAuthenticated) {
+      items.push(
+        { to: "/mocktests", label: "Mock Tests" },
+        { to: "/dashboard", label: "Dashboard" }
+      );
+      if (user?.role === "admin") {
+        items.push({ to: "/admin/courses", label: "Admin" });
+      }
+    } else {
+      items.push(
+        { to: "/login", label: "Login" }
+      );
+    }
+    return items;
+  };
+
   return (
     <header
       className="sticky top-0 z-40 w-full"
@@ -184,15 +205,7 @@ function Navbar() {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden px-6 pb-4 pt-2 space-y-1 border-t border-slate-100">
-          {[
-            { to: "/courses", label: "Courses" },
-            ...(isAuthenticated ? [{ to: "/dashboard", label: "Dashboard" }] : []),
-            ...(!isAuthenticated ? [{ to: "/login", label: "Login" }] : []),
-            ...(isAuthenticated ? [
-              { to: "/mocktests", label: "Mock Tests" },
-              { to: "/dashboard", label: "Dashboard" }
-            ] : []),
-          ].map((item) => (
+          {getMobileNavItems().map((item) => (
             <Link
               key={item.to}
               to={item.to}
