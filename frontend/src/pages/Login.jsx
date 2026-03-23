@@ -292,32 +292,31 @@ function Login() {
   <div style={{ position:'absolute', top:'-60px', right:'-60px', width:'250px', height:'250px', borderRadius:'50%', background:'rgba(59,130,246,0.06)' }} />
 
   {/* Logo */}
-  {/* Logo */}
-<div className="absolute top-6 left-6 flex items-center gap-3">
-  <div
-    className="flex h-10 w-10 items-center justify-center rounded-xl"
-    style={{
-      background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-      boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
-    }}
-  >
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-    </svg>
-  </div>
-  <div className="leading-tight">
-    <p className="text-base font-bold text-slate-900 tracking-tight">
-      Career<span style={{
+  <div className="absolute top-6 left-6 flex items-center gap-3">
+    <div
+      className="flex h-10 w-10 items-center justify-center rounded-xl"
+      style={{
         background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
-        backgroundClip: "text",
-      }}>Track</span>
-    </p>
-    <p className="text-xs text-slate-400">Learn smarter. Build consistently.</p>
+        boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
+      }}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    </div>
+    <div className="leading-tight">
+      <p className="text-base font-bold text-slate-900 tracking-tight">
+        Career<span style={{
+          background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>Track</span>
+      </p>
+      <p className="text-xs text-slate-400">Learn smarter. Build consistently.</p>
+    </div>
   </div>
-</div>
 
   {/* Animated SVG Scene */}
   <div className="relative w-full max-w-sm">
@@ -492,12 +491,30 @@ function Login() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-white text-sm font-bold"
-              style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)" }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl"
+              style={{
+                background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+                boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
+              }}
             >
-              CT
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
             </div>
-            <span className="text-lg font-bold text-slate-800">CareerTrack</span>
+            <div className="leading-tight">
+              <span className="text-base font-bold text-slate-900 tracking-tight">
+                Career
+                <span style={{
+                  background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}>
+                  Track
+                </span>
+              </span>
+            </div>
           </div>
           <div className="mb-8">
             <p className="text-blue-600 font-semibold text-sm mb-1">WELCOME BACK</p>
