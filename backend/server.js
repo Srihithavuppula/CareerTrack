@@ -17,8 +17,9 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://career-track-ltzmrb3yi-srihithavuppulas-projects.vercel.app',
+    'http://career-track-alpha.vercel.app',
   ],
+  
   credentials: true,
 }));
 app.use(express.json());
