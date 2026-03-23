@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, CheckCircle2, XCircle,
   ChevronRight, ChevronLeft, Send,
-  Trophy, RotateCcw, BookOpen, AlertTriangle,
+  Trophy, RotateCcw, BookOpen,
 } from 'lucide-react';
 import API from '../api/axios';
 
@@ -34,101 +34,39 @@ function MockTestPage() {
   // When displaying the result after exit, allow showing the card
   const [showResultAfterExit, setShowResultAfterExit] = useState(false);
 
-  // Blocker modal state (React Router useBlocker)
-  const [showBlockerModal, setShowBlockerModal] = useState(false);
-
-  // Block React Router navigation when test is in progress
-  const isTestInProgress = !submitted && Object.keys(answers).length > 0;
-
-  // Defensive: useBlocker hook might be undefined in old react-router
-  const blocker = useBlocker
-    ? useBlocker(
-        useCallback(
-          ({ currentLocation, nextLocation }) =>
-            isTestInProgress && currentLocation.pathname !== nextLocation.pathname,
-          [isTestInProgress]
-        )
-      )
-    : { state: 'unblocked', reset: null, proceed: null };
-
-  // Debug: Log blocker changes
-  useEffect(() => {
-    // Uncomment for debugging blocker
-    // console.log(`Blocker State: ${blocker.state}`);
-    if (blocker.state === 'blocked') {
-      setShowBlockerModal(true);
-    }
-  }, [blocker.state]);
-
-  // Warn on browser tab close / refresh
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (isTestInProgress) {
-        e.preventDefault();
-        e.returnValue = ''; // For Chrome
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isTestInProgress]);
-
   useEffect(() => {
     const fetchTest = async () => {
       try {
         setLoading(true);
         const res = await API.get(`/mocktests/${testId}`);
-        if (!res.data || !res.data.questions) {
-          setError('Malformed test data.');
-        } else {
-          setTest(res.data);
-        }
+        setTest(res.data);
       } catch (err) {
-        let msg;
-        if (err?.response?.data?.message) {
-          msg = err.response.data.message;
-        } else if (err.message) {
-          msg = err.message;
-        } else {
-          msg = 'Failed to load test.';
-        }
-        setError(msg);
+        setError(err.response?.data?.message || 'Failed to load test.');
       } finally {
         setLoading(false);
       }
     };
-    if (testId) {
-      fetchTest();
-    } else {
-      setError('Missing test ID.');
-      setLoading(false);
-    }
+    fetchTest();
   }, [testId]);
 
-  // Defensive: lastResult parse
+  // Attempt to fetch last attempted result from localStorage
   useEffect(() => {
     const storedResult = localStorage.getItem(`mocktest_result_${testId}`);
     if (storedResult) {
       try {
         setLastResult(JSON.parse(storedResult));
-      } catch (e) {
-        // Corrupted or invalid data in localStorage -- remove it
-        localStorage.removeItem(`mocktest_result_${testId}`);
-      }
+      } catch {}
     }
   }, [testId]);
 
+  // Store current result in localStorage whenever it changes and submitted is true
   useEffect(() => {
     if (submitted && results) {
-      try {
-        localStorage.setItem(
-          `mocktest_result_${testId}`,
-          JSON.stringify(results)
-        );
-        setLastResult(results);
-      } catch (err) {
-        // Storage can fail (quota, etc)
-        // Optionally alert user
-      }
+      localStorage.setItem(
+        `mocktest_result_${testId}`,
+        JSON.stringify(results)
+      );
+      setLastResult(results);
     }
   }, [submitted, results, testId]);
 
@@ -137,7 +75,7 @@ function MockTestPage() {
   };
 
   const handleSubmit = async () => {
-    if (!test || !test.questions) return;
+    if (!test) return;
 
     const unanswered = test.questions.filter((q) => !answers[q._id]);
     if (unanswered.length > 0) {
@@ -153,6 +91,7 @@ function MockTestPage() {
         questionId: q._id,
         answer: answers[q._id] || '',
       }));
+
       const res = await API.post(`/mocktests/${testId}/submit`, {
         answers: payload,
       });
@@ -160,15 +99,7 @@ function MockTestPage() {
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      let msg;
-      if (err?.response?.data?.message) {
-        msg = err.response.data.message;
-      } else if (err.message) {
-        msg = err.message;
-      } else {
-        msg = 'Failed to submit test.';
-      }
-      setError(msg);
+      setError(err.response?.data?.message || 'Failed to submit test.');
     } finally {
       setSubmitting(false);
     }
@@ -185,6 +116,7 @@ function MockTestPage() {
   };
 
   const handleExit = () => {
+    // If user hasn't answered any question, just navigate quietly
     if (Object.keys(answers).length === 0 && !submitted) {
       navigate('/mocktests');
     } else {
@@ -193,6 +125,7 @@ function MockTestPage() {
   };
 
   const confirmExit = () => {
+    // Don't save anything, just go back to tests
     setShowExitConfirm(false);
     navigate('/mocktests');
   };
@@ -201,37 +134,38 @@ function MockTestPage() {
     setShowExitConfirm(false);
   };
 
-  // Handler for "All Tests" button in header or result page
+  // New: Handler for "All Tests" button in header or result page
   const handleAllTestsClick = () => {
+    // If user hasn't answered anything and hasn't submitted, just go
     if (Object.keys(answers).length === 0 && !submitted) {
       navigate('/mocktests');
     } else if (!submitted) {
+      // Show exit modal - "Do you want to exit test?"
       setShowAllTestsExitConfirm(true);
     } else {
+      // Already submitted, just go
       navigate('/mocktests');
     }
   };
 
-  // When user confirms exit on "All Tests" modal
+  // When user confirms exit on "All Tests" modal, show the result card instead of discarding
   const confirmAllTestsExit = async () => {
     setShowAllTestsExitConfirm(false);
 
-    // Defensive: Only submit if test/questions exist
+    // If already submitted, just show last result if it exists
     if (submitted && results) {
       setShowResultAfterExit(true);
       return;
     }
 
+    // Try to submit the current answers as a result for partial test if any answers exist
+    // Or show previous result if lastResult exists
     if (Object.keys(answers).length === 0) {
+      // No answers, just show last result if any
       setShowResultAfterExit(true);
       return;
     }
-
-    if (!test || !test.questions) {
-      setShowResultAfterExit(true);
-      return;
-    }
-
+    // If there are answers, attempt to submit those for review grading
     try {
       setSubmitting(true);
       const payload = test.questions.map((q) => ({
@@ -245,7 +179,8 @@ function MockTestPage() {
       setSubmitted(true);
       setShowResultAfterExit(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
+    } catch {
+      // On error, fallback to show last result if any
       setShowResultAfterExit(true);
     } finally {
       setSubmitting(false);
@@ -263,18 +198,11 @@ function MockTestPage() {
 
   const answeredCount = Object.keys(answers).length;
   const totalQuestions = test?.questions?.length || 0;
-  const progressPct =
-    totalQuestions > 0
-      ? Math.round((answeredCount / totalQuestions) * 100)
-      : 0;
+  const progressPct = totalQuestions > 0
+    ? Math.round((answeredCount / totalQuestions) * 100)
+    : 0;
 
-  // Defensive: Helper to check for valid currentQuestion
-  const hasQuestion = test && test.questions && test.questions.length > 0 && currentIndex >= 0 && currentIndex < test.questions.length;
-  const currentQuestion = hasQuestion ? test.questions[currentIndex] : null;
-  const isAnswered = currentQuestion ? !!answers[currentQuestion._id] : false;
-  const selectedAnswer = currentQuestion ? answers[currentQuestion._id] : null;
-
-  // Loading State
+  // ── Loading ──────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -286,7 +214,6 @@ function MockTestPage() {
     );
   }
 
-  // Error State
   if (error) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -307,44 +234,26 @@ function MockTestPage() {
     );
   }
 
-  // Defensive: If no questions
-  if (!hasQuestion) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="card px-8 py-6 text-center">
-          <p className="font-medium text-red-600 mb-4">No questions found for this test.</p>
-          <button onClick={() => navigate('/mocktests')} className="btn-primary">
-            Back to Tests
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show previous result, or after submit, or after AllTests exit
+  // Always show the previous result card if not yet attempted this session,
+  // OR if result is forced after exit (showResultAfterExit)
   if (
     (lastResult && !submitted && Object.keys(answers).length === 0 && !showResultAfterExit) ||
     (submitted && results) ||
     showResultAfterExit
   ) {
+    // Determine which result to use
     let usedResults = null;
     if (showResultAfterExit) {
       usedResults = results || lastResult || null;
     } else {
       usedResults = submitted && results ? results : lastResult;
     }
-    // Defensive: Results structure check
-    if (!usedResults || typeof usedResults !== 'object' || usedResults.score === undefined) {
+    if (!usedResults) {
+      // If no result is available, show All Tests page
       navigate('/mocktests');
       return null;
     }
-    const {
-      score,
-      correctAnswers = 0,
-      totalQuestions: total = 0,
-      results: qResults = [],
-      courseTitle = '',
-    } = usedResults;
+    const { score, correctAnswers, totalQuestions: total, results: qResults } = usedResults;
     const grade =
       score >= 90 ? { label: 'Excellent', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' } :
       score >= 75 ? { label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' } :
@@ -366,15 +275,18 @@ function MockTestPage() {
             >
               <Trophy size={36} style={{ color: grade.color }} />
             </div>
+
             <p className="section-label mb-2">Test Completed</p>
             <h1 className="text-4xl font-bold text-slate-900">{score}%</h1>
-            <p className="mt-1 text-slate-500">{courseTitle}</p>
+            <p className="mt-1 text-slate-500">{usedResults.courseTitle}</p>
+
             <div
               className="inline-flex items-center gap-2 mt-3 rounded-full px-4 py-1.5 text-sm font-semibold"
               style={{ background: grade.bg, color: grade.color, border: `1px solid ${grade.border}` }}
             >
               {grade.label}
             </div>
+
             {/* Score breakdown */}
             <div className="mt-8 grid grid-cols-3 gap-4 text-center">
               {[
@@ -394,6 +306,7 @@ function MockTestPage() {
                 </div>
               ))}
             </div>
+
             {/* Progress bar */}
             <div className="mt-6 progress-track">
               <div
@@ -436,6 +349,7 @@ function MockTestPage() {
             </div>
           </div>
         </div>
+
         {/* Review Section */}
         {showReview && qResults && (
           <div className="card p-8">
@@ -445,7 +359,7 @@ function MockTestPage() {
             <div className="space-y-4">
               {qResults.map((q, index) => (
                 <div
-                  key={q._id || index}
+                  key={q._id}
                   className="rounded-2xl p-5"
                   style={
                     q.isCorrect
@@ -507,6 +421,7 @@ function MockTestPage() {
             </div>
           </div>
         )}
+
         {/* All Tests Exit Modal Overlay (for after "All Tests" click): */}
         {showAllTestsExitConfirm && (
           <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
@@ -538,85 +453,13 @@ function MockTestPage() {
     );
   }
 
-  // Main Test Page
+  // ── Test Page ────────────────────────────────────────
+  const currentQuestion = test.questions[currentIndex];
+  const isAnswered = !!answers[currentQuestion._id];
+  const selectedAnswer = answers[currentQuestion._id];
+
   return (
     <div className="space-y-6 py-6">
-      {/* Blocker Modal */}
-      {showBlockerModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40 backdrop-blur-sm">
-          <div
-            className="bg-white w-full max-w-sm shadow-2xl rounded-2xl overflow-hidden"
-            style={{ border: '1px solid #e2e8f0' }}
-          >
-            {/* Top accent bar */}
-            <div
-              className="h-1.5 w-full"
-              style={{ background: "linear-gradient(90deg,#f59e0b,#ef4444)" }}
-            />
-            <div className="p-6 text-center">
-              {/* Warning icon */}
-              <div
-                className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
-                style={{ background: '#fffbeb', border: '2px solid #fde68a' }}
-              >
-                <AlertTriangle size={28} style={{ color: '#d97706' }} />
-              </div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">
-                Exit without submitting?
-              </h2>
-              <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-                You have <span className="font-semibold text-slate-700">{answeredCount} answered</span> question(s).
-                If you leave now, your progress will <span className="font-semibold text-red-600">not be saved</span> and this attempt will be lost.
-              </p>
-              <div className="flex flex-col gap-2.5">
-                <button
-                  onClick={() => {
-                    setShowBlockerModal(false);
-                    blocker.reset && blocker.reset();
-                  }}
-                  className="btn-primary w-full"
-                  style={{
-                    background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
-                    justifyContent: 'center',
-                  }}
-                  tabIndex={0}
-                >
-                  Continue Test
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition"
-                  style={{
-                    background: "linear-gradient(135deg,#059669,#047857)",
-                    color: '#fff',
-                    border: 'none',
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    opacity: submitting ? 0.7 : 1,
-                  }}
-                  tabIndex={0}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <Send size={14} />
-                    {submitting ? 'Submitting...' : 'Submit & Exit'}
-                  </span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowBlockerModal(false);
-                    blocker.proceed && blocker.proceed();
-                  }}
-                  className="w-full rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 hover:bg-slate-50"
-                  style={{ border: '1.5px solid #e2e8f0' }}
-                  tabIndex={0}
-                >
-                  Leave anyway (discard progress)
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Exit Modal */}
       {showExitConfirm && (
@@ -705,6 +548,7 @@ function MockTestPage() {
             }}
           />
         </div>
+
         {/* Question dots */}
         <div className="mt-3 flex flex-wrap gap-1.5">
           {test.questions.map((q, i) => (
@@ -719,7 +563,6 @@ function MockTestPage() {
                   ? { background: '#dcfce7', color: '#16a34a', border: '1px solid #bbf7d0' }
                   : { background: '#f1f5f9', color: '#94a3b8' }
               }
-              aria-label={"Go to Question " + (i + 1)}
             >
               {i + 1}
             </button>
@@ -750,17 +593,18 @@ function MockTestPage() {
               {currentQuestion.type === 'mcq' ? 'Multiple Choice' : 'True / False'}
             </span>
           </div>
+
           <h2 className="text-xl font-bold text-slate-900 leading-relaxed mb-8">
             {currentQuestion.question}
           </h2>
+
           {/* Options */}
           <div className="space-y-3">
-            {currentQuestion.options && Array.isArray(currentQuestion.options) && currentQuestion.options.map((option, i) => {
+            {currentQuestion.options.map((option, i) => {
               const isSelected = selectedAnswer === option;
-              const key = typeof option === 'string' ? option : i;
               return (
                 <button
-                  key={key}
+                  key={i}
                   onClick={() => handleAnswer(currentQuestion._id, option)}
                   className="w-full text-left rounded-2xl p-4 transition-all"
                   style={
@@ -788,7 +632,6 @@ function MockTestPage() {
                       e.currentTarget.style.background = '#f8fafc';
                     }
                   }}
-                  aria-pressed={isSelected}
                 >
                   <div className="flex items-center gap-4">
                     <div
@@ -827,9 +670,11 @@ function MockTestPage() {
           <ChevronLeft size={16} />
           Previous
         </button>
+
         <span className="text-sm text-slate-400">
           {currentIndex + 1} / {totalQuestions}
         </span>
+
         {currentIndex < totalQuestions - 1 ? (
           <button
             onClick={() => setCurrentIndex((p) => p + 1)}
@@ -853,6 +698,7 @@ function MockTestPage() {
           </button>
         )}
       </div>
+
       {/* Submit from anywhere */}
       {answeredCount > 0 && answeredCount < totalQuestions && (
         <div className="card p-4 flex items-center justify-between">
