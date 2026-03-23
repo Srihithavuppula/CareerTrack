@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import {
   ArrowLeft, CheckCircle2, XCircle,
   ChevronRight, ChevronLeft, Send,
-  Trophy, RotateCcw, BookOpen,
+  Trophy, RotateCcw, BookOpen, AlertTriangle,
 } from 'lucide-react';
 import API from '../api/axios';
 
@@ -33,6 +33,40 @@ function MockTestPage() {
   const [showAllTestsExitConfirm, setShowAllTestsExitConfirm] = useState(false);
   // When displaying the result after exit, allow showing the card
   const [showResultAfterExit, setShowResultAfterExit] = useState(false);
+
+  // ── NEW: blocker modal state (React Router useBlocker) ──────────────
+  const [showBlockerModal, setShowBlockerModal] = useState(false);
+
+  // ── NEW: Block React Router navigation when test is in progress ──────
+  // Active = user has answered at least 1 question and hasn't submitted yet
+  const isTestInProgress = !submitted && Object.keys(answers).length > 0;
+
+  const blocker = useBlocker(
+    useCallback(
+      ({ currentLocation, nextLocation }) =>
+        isTestInProgress && currentLocation.pathname !== nextLocation.pathname,
+      [isTestInProgress]
+    )
+  );
+
+  // When blocker fires, show our custom modal instead of browser default
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowBlockerModal(true);
+    }
+  }, [blocker.state]);
+
+  // ── NEW: Warn on browser tab close / refresh ─────────────────────────
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isTestInProgress) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome to show the dialog
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isTestInProgress]);
 
   useEffect(() => {
     const fetchTest = async () => {
@@ -116,7 +150,6 @@ function MockTestPage() {
   };
 
   const handleExit = () => {
-    // If user hasn't answered any question, just navigate quietly
     if (Object.keys(answers).length === 0 && !submitted) {
       navigate('/mocktests');
     } else {
@@ -125,7 +158,6 @@ function MockTestPage() {
   };
 
   const confirmExit = () => {
-    // Don't save anything, just go back to tests
     setShowExitConfirm(false);
     navigate('/mocktests');
   };
@@ -134,38 +166,31 @@ function MockTestPage() {
     setShowExitConfirm(false);
   };
 
-  // New: Handler for "All Tests" button in header or result page
+  // Handler for "All Tests" button in header or result page
   const handleAllTestsClick = () => {
-    // If user hasn't answered anything and hasn't submitted, just go
     if (Object.keys(answers).length === 0 && !submitted) {
       navigate('/mocktests');
     } else if (!submitted) {
-      // Show exit modal - "Do you want to exit test?"
       setShowAllTestsExitConfirm(true);
     } else {
-      // Already submitted, just go
       navigate('/mocktests');
     }
   };
 
-  // When user confirms exit on "All Tests" modal, show the result card instead of discarding
+  // When user confirms exit on "All Tests" modal
   const confirmAllTestsExit = async () => {
     setShowAllTestsExitConfirm(false);
 
-    // If already submitted, just show last result if it exists
     if (submitted && results) {
       setShowResultAfterExit(true);
       return;
     }
 
-    // Try to submit the current answers as a result for partial test if any answers exist
-    // Or show previous result if lastResult exists
     if (Object.keys(answers).length === 0) {
-      // No answers, just show last result if any
       setShowResultAfterExit(true);
       return;
     }
-    // If there are answers, attempt to submit those for review grading
+
     try {
       setSubmitting(true);
       const payload = test.questions.map((q) => ({
@@ -180,7 +205,6 @@ function MockTestPage() {
       setShowResultAfterExit(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
-      // On error, fallback to show last result if any
       setShowResultAfterExit(true);
     } finally {
       setSubmitting(false);
@@ -241,7 +265,6 @@ function MockTestPage() {
     (submitted && results) ||
     showResultAfterExit
   ) {
-    // Determine which result to use
     let usedResults = null;
     if (showResultAfterExit) {
       usedResults = results || lastResult || null;
@@ -249,7 +272,6 @@ function MockTestPage() {
       usedResults = submitted && results ? results : lastResult;
     }
     if (!usedResults) {
-      // If no result is available, show All Tests page
       navigate('/mocktests');
       return null;
     }
@@ -461,7 +483,83 @@ function MockTestPage() {
   return (
     <div className="space-y-6 py-6">
 
-      {/* Exit Modal */}
+      {/* ── NEW: Blocker Modal — fires on browser back / link navigation ── */}
+      {showBlockerModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40 backdrop-blur-sm">
+          <div
+            className="bg-white w-full max-w-sm shadow-2xl rounded-2xl overflow-hidden"
+            style={{ border: '1px solid #e2e8f0' }}
+          >
+            {/* Top accent bar */}
+            <div
+              className="h-1.5 w-full"
+              style={{ background: "linear-gradient(90deg,#f59e0b,#ef4444)" }}
+            />
+            <div className="p-6 text-center">
+              {/* Warning icon */}
+              <div
+                className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+                style={{ background: '#fffbeb', border: '2px solid #fde68a' }}
+              >
+                <AlertTriangle size={28} style={{ color: '#d97706' }} />
+              </div>
+
+              <h2 className="text-lg font-bold text-slate-900 mb-1">
+                Exit without submitting?
+              </h2>
+              <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                You have <span className="font-semibold text-slate-700">{answeredCount} answered</span> question(s).
+                If you leave now, your progress will <span className="font-semibold text-red-600">not be saved</span> and this attempt will be lost.
+              </p>
+
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={() => {
+                    setShowBlockerModal(false);
+                    blocker.reset?.();
+                  }}
+                  className="btn-primary w-full"
+                  style={{
+                    background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                    justifyContent: 'center',
+                  }}
+                >
+                  Continue Test
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+                  style={{
+                    background: "linear-gradient(135deg,#059669,#047857)",
+                    color: '#fff',
+                    border: 'none',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    opacity: submitting ? 0.7 : 1,
+                  }}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Send size={14} />
+                    {submitting ? 'Submitting...' : 'Submit & Exit'}
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBlockerModal(false);
+                    blocker.proceed?.();
+                  }}
+                  className="w-full rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 hover:bg-slate-50"
+                  style={{ border: '1.5px solid #e2e8f0' }}
+                >
+                  Leave anyway (discard progress)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Modal — fires on ← All Tests arrow click */}
       {showExitConfirm && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
           <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
