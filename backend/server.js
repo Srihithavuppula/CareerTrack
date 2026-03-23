@@ -15,36 +15,31 @@ const app = express();
 
 // ── Core Middleware ──────────────────────────────────────────
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "https://career-track-alpha.vercel.app",
-  "https://career-track-opal.vercel.app",
+  'http://localhost:5173',
+  'https://career-track-alpha.vercel.app',
+  /https:\/\/career-track-.*\.vercel\.app$/,
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) {
-        return callback(null, true);
-      }
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (typeof allowed === 'string') return allowed === origin;
+      if (allowed instanceof RegExp) return allowed.test(origin);
+      return false;
+    });
 
-      if (
-        origin.startsWith("https://career-track-") &&
-        origin.endsWith(".vercel.app")
-      ) {
-        return callback(null, true);
-      }
-
-      return callback(new Error(`CORS not allowed for origin: ${origin}`));
-    },
-    credentials: true,
-  })
-);
-
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.error('CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // ── MongoDB ──────────────────────────────────────────────────
