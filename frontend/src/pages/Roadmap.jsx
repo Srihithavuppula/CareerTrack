@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import RoadmapFlowchart from '../components/RoadmapFlowchart';
@@ -66,6 +66,36 @@ function ConfirmModal({ show, icon, iconBg, title, desc, onCancel, onConfirm, co
   );
 }
 
+function CompletionModal({ show, onClose }) {
+  if (!show) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(15,23,42,0.5)", backdropFilter: "blur(6px)" }}
+    >
+      <div className="card mx-4 w-full max-w-md p-8 text-center">
+        <div
+          className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl mb-4"
+          style={{
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            color: "#059669",
+          }}
+        >
+          <CheckCircle2 size={22} />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">
+          Wohoo,you have succefully completed the course
+        </h2>
+        <button onClick={onClose} className="btn-primary mt-6 w-full">
+          Awesome!
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const Roadmap = () => {
   const { roadmapId } = useParams();
   const navigate = useNavigate();
@@ -77,6 +107,8 @@ const Roadmap = () => {
   const [resetting, setResetting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const prevFullyCompletedRef = useRef(false);
 
   useEffect(() => {
     const fetchRoadmap = async () => {
@@ -132,6 +164,85 @@ const Roadmap = () => {
       setShowDeleteConfirm(false);
     }
   };
+
+  const launchConfetti = () => {
+    const colors = [
+      '#2563eb',
+      '#7c3aed',
+      '#10b981',
+      '#059669',
+      '#f59e0b',
+      '#d97706',
+      '#dc2626',
+      '#3b82f6',
+    ];
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.inset = '0';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '60';
+    document.body.appendChild(container);
+
+    const pieceCount = 140;
+    const originX = window.innerWidth / 2;
+    const originY = Math.min(window.innerHeight * 0.25, 180);
+
+    for (let i = 0; i < pieceCount; i++) {
+      const piece = document.createElement('span');
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const w = 5 + Math.random() * 7;
+      const h = 8 + Math.random() * 12;
+      const dx = (Math.random() - 0.5) * 520;
+      const dy = 320 + Math.random() * 420;
+      const rotate = (Math.random() - 0.5) * 720;
+      const duration = 900 + Math.random() * 900;
+      const delay = Math.random() * 120;
+
+      piece.style.position = 'fixed';
+      piece.style.left = `${originX}px`;
+      piece.style.top = `${originY}px`;
+      piece.style.width = `${w}px`;
+      piece.style.height = `${h}px`;
+      piece.style.background = color;
+      piece.style.borderRadius = '2px';
+
+      piece.animate(
+        [
+          { transform: 'translate(0px, 0px) rotate(0deg)', opacity: 1 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(${rotate}deg)`, opacity: 0 },
+        ],
+        {
+          duration,
+          delay,
+          easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+          fill: 'forwards',
+        }
+      );
+
+      container.appendChild(piece);
+    }
+
+    setTimeout(() => {
+      container.remove();
+    }, 2400);
+  };
+
+  useEffect(() => {
+    const days = roadmap?.days || [];
+    const completed = days.length > 0 && days.every((d) => d.completed);
+
+    if (completed && !prevFullyCompletedRef.current) {
+      setShowCompletionModal(true);
+      launchConfetti();
+    }
+
+    if (!completed) {
+      setShowCompletionModal(false);
+    }
+
+    prevFullyCompletedRef.current = completed;
+  }, [roadmap]);
 
   if (loading) {
     return (
@@ -360,6 +471,11 @@ const Roadmap = () => {
         confirming={deleting}
         confirmLabel="Yes, Delete"
         confirmStyle={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}
+      />
+
+      <CompletionModal
+        show={showCompletionModal}
+        onClose={() => setShowCompletionModal(false)}
       />
     </div>
   );
