@@ -111,10 +111,45 @@ function Dashboard() {
     <div className="space-y-8 py-6">
 
       {/* Header */}
-      <div className="flex items-center">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Welcome, {user?.name || 'Student'}
-        </h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <LayoutDashboard size={16} className="text-blue-600" />
+            <p className="section-label">Dashboard</p>
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900">My Learning Hub</h1>
+
+          <div
+            className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-100/60 px-4 py-3"
+          >
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white text-sm font-bold"
+              style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)" }}
+            >
+              {user?.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-slate-700">
+                Welcome, {user?.name || "Student"}
+              </p>
+              <p className="text-xs capitalize text-slate-500">
+                {user?.role || "user"}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Track progress across all your roadmaps and mock tests.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate('/courses')}
+          className="btn-primary hidden sm:inline-flex"
+        >
+          <Plus size={15} />
+          New Roadmap
+        </button>
       </div>
 
       {/* Stat Cards */}
