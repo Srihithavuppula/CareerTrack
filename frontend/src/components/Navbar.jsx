@@ -133,7 +133,7 @@ function Navbar() {
           ) : (
             <>
               <div
-                className="hidden sm:flex items-center gap-2.5 rounded-xl px-3 py-2"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2"
                 style={{
                   background: "#f8fafc",
                   border: "1px solid #e2e8f0",
@@ -205,6 +205,26 @@ function Navbar() {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden px-6 pb-4 pt-2 space-y-1 border-t border-slate-100">
+          {isAuthenticated && (
+            <div
+              className="flex items-center gap-2.5 rounded-xl px-4 py-2"
+              style={{
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white"
+                style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)" }}
+              >
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div className="leading-tight">
+                <p className="text-xs font-semibold text-slate-900">{user?.name}</p>
+                <p className="text-[10px] capitalize text-slate-400">{user?.role}</p>
+              </div>
+            </div>
+          )}
           {getMobileNavItems().map((item) => (
             <Link
               key={item.to}

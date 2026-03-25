@@ -7,6 +7,7 @@ import {
   ClipboardList, Target,
 } from 'lucide-react';
 import API from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -14,6 +15,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -116,6 +118,24 @@ function Dashboard() {
             <p className="section-label">Dashboard</p>
           </div>
           <h1 className="text-3xl font-bold text-slate-900">My Learning Hub</h1>
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/60 px-4 py-3">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white text-sm font-bold"
+              style={{
+                background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+              }}
+            >
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-slate-900">
+                Welcome, {user?.name || 'Learner'}
+              </p>
+              <p className="text-xs capitalize text-slate-500">
+                {user?.role || 'user'}
+              </p>
+            </div>
+          </div>
           <p className="mt-1 text-sm text-slate-500">
             Track progress across all your roadmaps and mock tests.
           </p>
