@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import api from "../api/axios";
@@ -281,7 +281,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#f0f4ff" }}>
+    <div className="flex flex-1" style={{ background: "#f0f4ff" }}>
       {/* ── Left Panel — Illustration ─────────────────── */}
       <div
   className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-10 relative overflow-hidden"

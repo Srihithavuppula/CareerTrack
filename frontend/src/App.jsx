@@ -9,22 +9,25 @@ import Roadmap from "./pages/Roadmap";
 import AdminCourses from "./pages/AdminCourses";
 import MockTests from "./pages/MockTests";
 import MockTestPage from "./pages/MockTestPage";
+import Footer from "./components/Footer";
 
 function App() {
   const location = useLocation();
   const hideNavbar = ["/login", "/register"].includes(location.pathname);
 
   return (
-    <div className="min-h-screen" style={{ background: "#f8fafc" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#f8fafc" }}>
       {!hideNavbar && <Navbar />}
 
       {hideNavbar ? (
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Routes>
+        <div className="flex-1">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          </Routes>
+        </div>
       ) : (
-        <main className="page-container">
+        <main className="page-container flex-1">
           <Routes>
             <Route path="/" element={<Courses />} />
             <Route path="/courses" element={<Courses />} />
@@ -71,6 +74,8 @@ function App() {
           </Routes>
         </main>
       )}
+
+      <Footer />
     </div>
   );
 }

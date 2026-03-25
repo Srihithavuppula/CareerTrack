@@ -59,7 +59,7 @@ function Register() {
   const strengthLabels = ["", "Too short", "Weak", "Good", "Strong"];
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#f0f4ff" }}>
+    <div className="flex flex-1" style={{ background: "#f0f4ff" }}>
 
       {/* ── Left Panel — Illustration ─────────────────── */}
       <div
