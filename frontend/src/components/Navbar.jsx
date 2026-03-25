@@ -151,7 +151,10 @@ function Navbar() {
                 </div>
               </div>
 
-              <button onClick={() => setShowLogoutModal(true)} className="btn-secondary">
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                className="hidden sm:inline-flex btn-secondary"
+              >
   <LogOut size={14} />
   <span className="hidden sm:inline">Logout</span>
 </button>
@@ -225,6 +228,21 @@ function Navbar() {
               </div>
             </div>
           )}
+
+          {isAuthenticated && (
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                setShowLogoutModal(true);
+              }}
+              className="w-full btn-secondary inline-flex items-center justify-center gap-2"
+              style={{ color: "#dc2626", borderColor: "#fecaca", background: "#fff5f5" }}
+            >
+              <LogOut size={14} />
+              Logout
+            </button>
+          )}
+
           {getMobileNavItems().map((item) => (
             <Link
               key={item.to}
