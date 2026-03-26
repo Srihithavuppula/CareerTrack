@@ -86,7 +86,7 @@ function CompletionModal({ show, onClose }) {
           <CheckCircle2 size={22} />
         </div>
         <h2 className="text-xl font-bold text-slate-500 mb-2">
-          Wohoo,you have succesfully completed the course.
+          Wohoo,you have successfully completed the course.
         </h2>
         <button onClick={onClose} className="btn-primary mt-6 w-full">
           Awesome!

@@ -74,17 +74,47 @@ function MockTestPage() {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
   };
 
-  const handleSubmit = async () => {
-    if (!test) return;
+  // Utility for reusing the All Tests Exit modal component
+  const ExitModal = ({
+    open,
+    onConfirm,
+    onCancel,
+    confirmLabel,
+    cancelLabel,
+    title,
+    message
+  }) => {
+    if (!open) return null;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+        <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
+          <h2 className="text-lg font-bold mb-2">{title}</h2>
+          <p className="text-slate-600 mb-4">
+            {message}
+          </p>
+          <div className="flex justify-center gap-4 mt-2">
+            <button
+              onClick={onConfirm}
+              className="btn-primary"
+              style={{ minWidth: 80 }}
+            >
+              {confirmLabel}
+            </button>
+            <button
+              onClick={onCancel}
+              className="btn-secondary"
+              style={{ minWidth: 80 }}
+            >
+              {cancelLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
-    const unanswered = test.questions.filter((q) => !answers[q._id]);
-    if (unanswered.length > 0) {
-      const confirmSubmit = window.confirm(
-        `You have ${unanswered.length} unanswered question(s). Submit anyway?`
-      );
-      if (!confirmSubmit) return;
-    }
-
+  // This utility handles submitting answers (for main submit & "exit and submit partial result")
+  const submitAnswers = async ({ showResultAfterSubmit = false } = {}) => {
     try {
       setSubmitting(true);
       const payload = test.questions.map((q) => ({
@@ -97,12 +127,31 @@ function MockTestPage() {
       });
       setResults(res.data);
       setSubmitted(true);
+      if (showResultAfterSubmit) {
+        setShowResultAfterExit(true);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit test.');
+      setError(err?.response?.data?.message || 'Failed to submit test.');
+      if (showResultAfterSubmit) {
+        setShowResultAfterExit(true);
+      }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!test) return;
+
+    const unanswered = test.questions.filter((q) => !answers[q._id]);
+    if (unanswered.length > 0) {
+      const confirmSubmit = window.confirm(
+        `You have ${unanswered.length} unanswered question(s). Submit anyway?`
+      );
+      if (!confirmSubmit) return;
+    }
+    await submitAnswers();
   };
 
   const handleRetake = () => {
@@ -165,26 +214,8 @@ function MockTestPage() {
       setShowResultAfterExit(true);
       return;
     }
-    // If there are answers, attempt to submit those for review grading
-    try {
-      setSubmitting(true);
-      const payload = test.questions.map((q) => ({
-        questionId: q._id,
-        answer: answers[q._id] || '',
-      }));
-      const res = await API.post(`/mocktests/${testId}/submit`, {
-        answers: payload,
-      });
-      setResults(res.data);
-      setSubmitted(true);
-      setShowResultAfterExit(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      // On error, fallback to show last result if any
-      setShowResultAfterExit(true);
-    } finally {
-      setSubmitting(false);
-    }
+
+    await submitAnswers({ showResultAfterSubmit: true });
   };
 
   const cancelAllTestsExit = () => {
@@ -423,32 +454,15 @@ function MockTestPage() {
         )}
 
         {/* All Tests Exit Modal Overlay (for after "All Tests" click): */}
-        {showAllTestsExitConfirm && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-            <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
-              <h2 className="text-lg font-bold mb-2">Do you want to exit test?</h2>
-              <p className="text-slate-600 mb-4">
-                If you exit now, your current answers will be submitted for result and you can view your score.
-              </p>
-              <div className="flex justify-center gap-4 mt-2">
-                <button
-                  onClick={confirmAllTestsExit}
-                  className="btn-primary"
-                  style={{ minWidth: 80 }}
-                >
-                  Yes, Exit & Show Result
-                </button>
-                <button
-                  onClick={cancelAllTestsExit}
-                  className="btn-secondary"
-                  style={{ minWidth: 80 }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ExitModal
+          open={showAllTestsExitConfirm}
+          onConfirm={confirmAllTestsExit}
+          onCancel={cancelAllTestsExit}
+          title="Do you want to exit test?"
+          message="If you exit now, your current answers will be submitted for result and you can view your score."
+          confirmLabel="Yes, Exit & Show Result"
+          cancelLabel="Cancel"
+        />
       </div>
     );
   }
@@ -462,60 +476,26 @@ function MockTestPage() {
     <div className="space-y-6 py-6">
 
       {/* Exit Modal */}
-      {showExitConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-          <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
-            <h2 className="text-lg font-bold mb-2">Want to exit the test?</h2>
-            <p className="text-slate-600 mb-4">
-              If you exit, your answers will not be saved and you will lose your progress for this attempt.
-            </p>
-            <div className="flex justify-center gap-4 mt-2">
-              <button
-                onClick={confirmExit}
-                className="btn-primary"
-                style={{ minWidth: 80 }}
-              >
-                Yes, Exit
-              </button>
-              <button
-                onClick={cancelExit}
-                className="btn-secondary"
-                style={{ minWidth: 80 }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExitModal
+        open={showExitConfirm}
+        onConfirm={confirmExit}
+        onCancel={cancelExit}
+        title="Want to exit the test?"
+        message="If you exit, your answers will not be saved and you will lose your progress for this attempt."
+        confirmLabel="Yes, Exit"
+        cancelLabel="Cancel"
+      />
 
       {/* All Tests Exit Modal for Header button */}
-      {showAllTestsExitConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-          <div className="bg-white card p-6 w-full max-w-sm shadow-xl rounded-xl text-center">
-            <h2 className="text-lg font-bold mb-2">Do you want to exit test?</h2>
-            <p className="text-slate-600 mb-4">
-              If you exit now, your current answers will be submitted for result and you can view your score.
-            </p>
-            <div className="flex justify-center gap-4 mt-2">
-              <button
-                onClick={confirmAllTestsExit}
-                className="btn-primary"
-                style={{ minWidth: 80 }}
-              >
-                Yes, Exit & Show Result
-              </button>
-              <button
-                onClick={cancelAllTestsExit}
-                className="btn-secondary"
-                style={{ minWidth: 80 }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExitModal
+        open={showAllTestsExitConfirm}
+        onConfirm={confirmAllTestsExit}
+        onCancel={cancelAllTestsExit}
+        title="Do you want to exit test?"
+        message="If you exit now, your current answers will be submitted for result and you can view your score."
+        confirmLabel="Yes, Exit & Show Result"
+        cancelLabel="Cancel"
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between">
