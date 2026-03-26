@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, CheckCircle2, XCircle,
   ChevronRight, ChevronLeft, Send,
@@ -10,7 +10,9 @@ import API from '../api/axios';
 function MockTestPage() {
   const { testId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // Use location.key to force remount when retaken
   const [test, setTest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,7 +49,7 @@ function MockTestPage() {
       }
     };
     fetchTest();
-  }, [testId]);
+  }, [testId, location.key]); // location.key added for force remount
 
   // Attempt to fetch last attempted result from localStorage
   useEffect(() => {
@@ -57,7 +59,7 @@ function MockTestPage() {
         setLastResult(JSON.parse(storedResult));
       } catch {}
     }
-  }, [testId]);
+  }, [testId, location.key]);
 
   // Store current result in localStorage whenever it changes and submitted is true
   useEffect(() => {
@@ -97,6 +99,7 @@ function MockTestPage() {
               onClick={onConfirm}
               className="btn-primary"
               style={{ minWidth: 80 }}
+              type="button"
             >
               {confirmLabel}
             </button>
@@ -104,6 +107,7 @@ function MockTestPage() {
               onClick={onCancel}
               className="btn-secondary"
               style={{ minWidth: 80 }}
+              type="button"
             >
               {cancelLabel}
             </button>
@@ -156,20 +160,9 @@ function MockTestPage() {
 
   // Add retake test functionality
   const handleRetake = () => {
-    setAnswers({});
-    setCurrentIndex(0);
-    setSubmitted(false);
-    setResults(null);
-    setShowReview(false);
-    setShowResultAfterExit(false);
-    setError('');
-    // Optionally re-fetch the latest test data if desired, uncomment the next lines:
-    // setLoading(true);
-    // API.get(`/mocktests/${testId}`).then(res => {
-    //   setTest(res.data);
-    //   setLoading(false);
-    // });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // On retake, navigate to the same route, triggering React Router remount
+    // This uses location.key in useEffect to reload/reset all state
+    navigate(`/mocktests/${testId}`, { replace: true });
   };
 
   const handleExit = () => {
@@ -364,9 +357,7 @@ function MockTestPage() {
             <div className="mt-6 flex gap-3 justify-center flex-wrap">
               <button
                 type="button"
-                onClick={() => {
-                  handleRetake();
-                }}
+                onClick={handleRetake}
                 className="btn-secondary"
               >
                 <RotateCcw size={15} />
