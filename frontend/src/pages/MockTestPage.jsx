@@ -154,6 +154,7 @@ function MockTestPage() {
     await submitAnswers();
   };
 
+  // Add retake test functionality
   const handleRetake = () => {
     setAnswers({});
     setCurrentIndex(0);
@@ -161,6 +162,13 @@ function MockTestPage() {
     setResults(null);
     setShowReview(false);
     setShowResultAfterExit(false);
+    setError('');
+    // Optionally re-fetch the latest test data if desired, uncomment the next lines:
+    // setLoading(true);
+    // API.get(`/mocktests/${testId}`).then(res => {
+    //   setTest(res.data);
+    //   setLoading(false);
+    // });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
