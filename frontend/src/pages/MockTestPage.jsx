@@ -362,11 +362,18 @@ function MockTestPage() {
               />
             </div>
             <div className="mt-6 flex gap-3 justify-center flex-wrap">
-              <button onClick={handleRetake} className="btn-secondary">
+              <button
+                type="button"
+                onClick={() => {
+                  handleRetake();
+                }}
+                className="btn-secondary"
+              >
                 <RotateCcw size={15} />
                 Retake Test
               </button>
               <button
+                type="button"
                 onClick={() => setShowReview(true)}
                 className="btn-primary"
               >
